@@ -1,15 +1,16 @@
 # 📦 CompoApp - Lightweight DI Framework for Go
 
-**CompoApp** is a zero-dependency, 300-line DI (Dependency Injection) framework for Go that makes building scalable applications easy. It automatically resolves dependencies, manages component lifecycle, and handles graceful shutdowns.
+**CompoApp** is a zero-dependency, 400-line DI (Dependency Injection) framework for Go that makes building scalable applications easy. It automatically resolves dependencies, manages component lifecycle, and handles graceful shutdowns.
 
 ## 🌟 Features
 
 - **Zero Dependencies** - Pure Go, no external libraries
-- **Ultra Lightweight** - Only ~300 lines of clean, readable code
+- **Ultra Lightweight** - Only ~400 lines of clean, readable code
 - **Automatic Dependency Resolution** - Register constructors, we handle the rest
 - **Type-Based Wiring** - Dependencies resolved by function parameter types
 - **Topological Sorting** - Components created in correct dependency order
 - **Circular Dependency Detection** - Prevents runtime deadlocks
+- **Automatic Interface Implementation Injection** - Useful for testing
 - **Thread-Safe** - Safe for concurrent use
 - **Context-Based Lifecycle** - Graceful startup/shutdown
 
@@ -88,16 +89,20 @@ func (c *Container) MustResolve(target interface{})
 ## ⚠️ Current Limitations
 
 - **Exact Type Matching Only** - No interface binding support
-- **Basic Named Dependencies** - `ProvideNamed` exists but limited resolution
+- **Basic Named Dependencies** - No tags or name-based resolution
 - **No Lifecycle Hooks** - Basic startup/shutdown only
-- **Simple Error Handling** - Limited diagnostic information
+- **No Error Handling** - Doesn't support ctor-s with error return
+- **Limited ctor return types** - Only support ctors which returns pointers
+- **Only types in ctor return** - Doesn't support interfaces as ctor return value
+- **Only one return value** - one ctor = one value
 
 ## 🛣️ Roadmap
 
 - [x] Basic dependency resolution with reflection
 - [x] Topological sorting and circular dependency detection
 - [x] Thread-safe container operations
-- [ ] Interface binding support
+- [x] Interface binding support
+- [ ] Error handling
 - [ ] Named dependency resolution
 
 ## 📊 Benefits
@@ -134,6 +139,6 @@ MIT License - see LICENSE file for details.
 
 ---
 
-*"300 lines of code that solve dependency injection elegantly"*
+*"400 lines of code that solve dependency injection elegantly"*
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
