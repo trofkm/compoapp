@@ -1,0 +1,99 @@
+version: "2"
+run:
+  go: "1.24"
+  issues-exit-code: 1
+  tests: false
+  allow-parallel-runners: true
+linters:
+  default: none
+  enable:
+    - bodyclose
+    - copyloopvar
+    - dogsled
+    - errcheck
+    - errname
+    - funlen
+    - gochecknoinits
+    - goconst
+    - gocritic
+    - gocyclo
+    - goprintffuncname
+    - gosec
+    - govet
+    - ineffassign
+    - misspell
+    - mnd
+    - nakedret
+    - noctx
+    - nolintlint
+    - prealloc
+    - staticcheck
+    - unconvert
+    - unparam
+    - unused
+    - whitespace
+  settings:
+    depguard:
+      rules:
+        main:
+          deny:
+            - pkg: github.com/pkg/errors
+              desc: Should be replaced by standard lib errors package.
+    dupl:
+      threshold: 150
+    funlen:
+      lines: 100
+      statements: 55
+    goconst:
+      min-len: 2
+      min-occurrences: 3
+    gocritic:
+      disabled-checks:
+        - dupImport
+        - ifElseChain
+        - octalLiteral
+        - whyNoLint
+      enabled-tags:
+        - diagnostic
+        - experimental
+        - opinionated
+        - performance
+        - style
+    gocyclo:
+      min-complexity: 25
+    gosec:
+      excludes:
+        - G115
+    lll:
+      line-length: 140
+      tab-width: 8
+    misspell:
+      locale: US
+      ignore-rules:
+        - Fibre
+        - fibre
+    mnd:
+      ignored-numbers:
+        - 0o400,0o600,0o660,0o640,0o644,0o700,0o750,2
+      ignored-files:
+        - .*_test.go
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - pkg/go-glib
+      - pkg/go-gio
+      - pkg/go-systemd
+      - pkg/go-networkmanager
+      - pkg/go-blockdev
+      - pkg/go-nvme
+      - pkg/go-nvmet
+      - pkg/go-scst
+      - pkg/go-udev
+      - third_party$
+      - builtin$
+      - examples$
