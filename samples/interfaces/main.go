@@ -46,5 +46,4 @@ func main() {
 
 	var app *App
 	container.MustResolve(&app)
-
 }
