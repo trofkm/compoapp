@@ -145,16 +145,25 @@ func (c *Container) analyzeFunction(fnType reflect.Type) (fnSignature, error) {
 	}
 
 	// Analyze return values
-	// todo: add here error handling
-
-	if fnType.NumOut() != 1 {
-		return fnSignature{}, fmt.Errorf("constructor must have one return value")
-	}
-	if fnType.Out(0).Kind() != reflect.Pointer {
-		return fnSignature{}, fmt.Errorf("constructor must return pointer value")
+	// Support either: (*T) or (*T, error)
+	if fnType.NumOut() == 0 || fnType.NumOut() > 2 {
+		return fnSignature{}, fmt.Errorf("constructor must return (*T) or (*T, error)")
 	}
 
-	return fnSignature{args, fnType.Out(0)}, nil
+	firstOut := fnType.Out(0)
+	if firstOut.Kind() != reflect.Pointer {
+		return fnSignature{}, fmt.Errorf("constructor must return pointer value as first result")
+	}
+
+	if fnType.NumOut() == 2 {
+		secondOut := fnType.Out(1)
+		errorType := reflect.TypeOf((*error)(nil)).Elem()
+		if !secondOut.Implements(errorType) {
+			return fnSignature{}, fmt.Errorf("second return value must be error")
+		}
+	}
+
+	return fnSignature{args, firstOut}, nil
 }
 
 // Resolve resolves and returns an instance of the requested type.
@@ -367,10 +376,11 @@ func (c *Container) resolveInstance(typ reflect.Type) error {
 	// Call constructor
 	results := constructorValue.Call(args)
 
-	// Handle error return
-	if len(results) > 0 {
+	// Handle optional error return (when present and non-nil)
+	if len(results) > 1 {
 		lastResult := results[len(results)-1]
-		if lastResult.Type().String() == "error" && !lastResult.IsNil() {
+		errorType := reflect.TypeOf((*error)(nil)).Elem()
+		if lastResult.Type().Implements(errorType) && !lastResult.IsNil() {
 			return lastResult.Interface().(error)
 		}
 	}

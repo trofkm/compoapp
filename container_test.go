@@ -220,14 +220,14 @@ var _ = Describe("Container", func() {
 	})
 
 	Describe("Error Handling", func() {
-		PIt("should handle constructor errors", func() {
+		It("should handle constructor errors", func() {
 			Expect(container.Provide(NewErrorDatabase)).To(Succeed())
 
 			var db *Database
 			Expect(container.Resolve(&db)).To(MatchError(ContainSubstring("database connection failed")))
 		})
 
-		PIt("should handle successful constructors with error return", func() {
+		It("should handle successful constructors with error return", func() {
 			Expect(container.Provide(NewSuccessfulDatabase)).To(Succeed())
 
 			var db *Database

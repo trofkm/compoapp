@@ -102,8 +102,9 @@ func (c *Container) MustResolve(target interface{})
 - [x] Topological sorting and circular dependency detection
 - [x] Thread-safe container operations
 - [x] Interface binding support
-- [ ] Error handling
+- [x] Error handling
 - [ ] Named dependency resolution
+- [ ] Dependency graph visualization
 
 ## 📊 Benefits
 
