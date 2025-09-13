@@ -2,7 +2,9 @@
 package compoapp
 
 import (
+	"bufio"
 	"fmt"
+	"os"
 	"reflect"
 	"sync"
 )
@@ -441,5 +443,88 @@ func (c *Container) validateDependencies() error {
 			return fmt.Errorf("missing constructor for dependency type: %s", depType.String())
 		}
 	}
+	return nil
+}
+
+const dotHeader string = `digraph DependencyGraph {
+    rankdir=LR;
+    node [shape=box, style=rounded, fontname="Arial"];
+    edge [fontname="Arial"];
+
+`
+
+// Visualize creates .dot file for graphviz visualization
+func (c *Container) Visualize(filepath string) error {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	//nolint:gosec
+	f, err := os.Create(filepath)
+	if err != nil {
+		return fmt.Errorf("failed to create file: %w", err)
+	}
+	defer f.Close()
+
+	writer := bufio.NewWriter(f)
+	defer writer.Flush()
+
+	// Write DOT header
+	if _, err := writer.WriteString(dotHeader); err != nil {
+		return fmt.Errorf("failed to write digraph header: %w", err)
+	}
+
+	nodes := make(map[string]struct{})
+	edges := make(map[string][]string)
+
+	// Process dependencies
+	for componentName, deps := range c.graph.dependencies {
+		from := componentName.String()
+		nodes[from] = struct{}{}
+		for _, dep := range deps {
+			to := dep.String()
+			nodes[to] = struct{}{}
+			edges[from] = append(edges[from], to)
+		}
+	}
+
+	// Process dependents (reverse dependencies)
+	for componentName, dependents := range c.graph.dependents {
+		to := componentName.String()
+		nodes[to] = struct{}{}
+		for _, dep := range dependents {
+			from := dep.String()
+			nodes[from] = struct{}{}
+			edges[from] = append(edges[from], to)
+		}
+	}
+
+	for nodeName := range nodes {
+		if _, err := fmt.Fprintf(writer, "    %q;\n", nodeName); err != nil {
+			return fmt.Errorf("failed to write node name: %w", err)
+		}
+	}
+
+	if _, err := writer.WriteString("\n"); err != nil {
+		return fmt.Errorf("failed to write newline: %w", err)
+	}
+
+	addedEdges := make(map[string]struct{})
+	for from, toList := range edges {
+		for _, to := range toList {
+			edgeKey := from + "->" + to
+			if _, exists := addedEdges[edgeKey]; exists {
+				continue
+			}
+			if _, err := fmt.Fprintf(writer, "    %q -> %q;\n", from, to); err != nil {
+				return fmt.Errorf("failed to write edge: %w", err)
+			}
+			addedEdges[edgeKey] = struct{}{}
+		}
+	}
+
+	// Close DOT graph
+	if _, err := writer.WriteString("}\n"); err != nil {
+		return fmt.Errorf("failed to write graph closure: %w", err)
+	}
+
 	return nil
 }

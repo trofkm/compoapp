@@ -104,7 +104,7 @@ func (c *Container) MustResolve(target interface{})
 - [x] Interface binding support
 - [x] Error handling
 - [ ] Named dependency resolution
-- [ ] Dependency graph visualization
+- [x] Dependency graph visualization
 
 ## 📊 Benefits
 

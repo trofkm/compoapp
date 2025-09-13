@@ -46,4 +46,8 @@ func main() {
 
 	var app *App
 	container.MustResolve(&app)
+
+	if err := container.Visualize("graph.dot"); err != nil {
+		panic(err)
+	}
 }
