@@ -91,7 +91,6 @@ func (c *Container) MustResolve(target interface{})
 - **Exact Type Matching Only** - No interface binding support
 - **Basic Named Dependencies** - No tags or name-based resolution
 - **No Lifecycle Hooks** - Basic startup/shutdown only
-- **No Error Handling** - Doesn't support ctor-s with error return
 - **Limited ctor return types** - Only support ctors which returns pointers
 - **Only types in ctor return** - Doesn't support interfaces as ctor return value
 - **Only one return value** - one ctor = one value
