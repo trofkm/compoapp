@@ -39,6 +39,14 @@ linters:
           deny:
             - pkg: github.com/pkg/errors
               desc: Should be replaced by standard lib errors package.
+    errcheck:
+      exclude-functions:
+        - (*os.File).Close
+        - (*bufio.Writer).Flush
+        - (*bufio.Reader).Close
+        - io.Copy
+        - fmt.Print.*
+        - log.Print.*
     dupl:
       threshold: 150
     funlen:
