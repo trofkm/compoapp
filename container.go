@@ -2,10 +2,10 @@
 package compoapp
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"reflect"
+	"strings"
 	"sync"
 )
 
@@ -449,9 +449,7 @@ func (c *Container) validateDependencies() error {
 const dotHeader string = `digraph DependencyGraph {
     rankdir=LR;
     node [shape=box, style=rounded, fontname="Arial"];
-    edge [fontname="Arial"];
-
-`
+    edge [fontname="Arial"];`
 
 // Visualize creates .dot file for graphviz visualization
 func (c *Container) Visualize(filepath string) error {
@@ -464,13 +462,11 @@ func (c *Container) Visualize(filepath string) error {
 	}
 	defer f.Close()
 
-	writer := bufio.NewWriter(f)
-	defer writer.Flush()
+	b := strings.Builder{}
 
 	// Write DOT header
-	if _, err := writer.WriteString(dotHeader); err != nil {
-		return fmt.Errorf("failed to write digraph header: %w", err)
-	}
+	b.WriteString(dotHeader)
+	b.WriteString("\n\n")
 
 	nodes := make(map[string]struct{})
 	edges := make(map[string][]string)
@@ -498,14 +494,10 @@ func (c *Container) Visualize(filepath string) error {
 	}
 
 	for nodeName := range nodes {
-		if _, err := fmt.Fprintf(writer, "    %q;\n", nodeName); err != nil {
-			return fmt.Errorf("failed to write node name: %w", err)
-		}
+		b.WriteString(fmt.Sprintf("    %q;\n", nodeName))
 	}
 
-	if _, err := writer.WriteString("\n"); err != nil {
-		return fmt.Errorf("failed to write newline: %w", err)
-	}
+	b.WriteString("\n")
 
 	addedEdges := make(map[string]struct{})
 	for from, toList := range edges {
@@ -514,16 +506,16 @@ func (c *Container) Visualize(filepath string) error {
 			if _, exists := addedEdges[edgeKey]; exists {
 				continue
 			}
-			if _, err := fmt.Fprintf(writer, "    %q -> %q;\n", from, to); err != nil {
-				return fmt.Errorf("failed to write edge: %w", err)
-			}
+			b.WriteString(fmt.Sprintf("    %q -> %q;\n", from, to))
 			addedEdges[edgeKey] = struct{}{}
 		}
 	}
 
 	// Close DOT graph
-	if _, err := writer.WriteString("}\n"); err != nil {
-		return fmt.Errorf("failed to write graph closure: %w", err)
+	b.WriteString("}\n")
+
+	if _, err := f.WriteString(b.String()); err != nil {
+		return fmt.Errorf("cannot write to dot file: %w", err)
 	}
 
 	return nil
