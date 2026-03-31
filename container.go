@@ -494,7 +494,7 @@ func (c *Container) Visualize(filepath string) error {
 	}
 
 	for nodeName := range nodes {
-		b.WriteString(fmt.Sprintf("    %q;\n", nodeName))
+		fmt.Fprintf(&b, "    %q;\n", nodeName)
 	}
 
 	b.WriteString("\n")
@@ -506,7 +506,7 @@ func (c *Container) Visualize(filepath string) error {
 			if _, exists := addedEdges[edgeKey]; exists {
 				continue
 			}
-			b.WriteString(fmt.Sprintf("    %q -> %q;\n", from, to))
+			fmt.Fprintf(&b, "    %q -> %q;\n", from, to)
 			addedEdges[edgeKey] = struct{}{}
 		}
 	}
