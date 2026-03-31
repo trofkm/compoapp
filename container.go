@@ -1,4 +1,3 @@
-// container.go
 package compoapp
 
 import (

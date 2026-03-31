@@ -86,15 +86,6 @@ func (c *Container) Resolve(target interface{}) error
 func (c *Container) MustResolve(target interface{})
 ```
 
-## ⚠️ Current Limitations
-
-- **Exact Type Matching Only** - No interface binding support
-- **Basic Named Dependencies** - No tags or name-based resolution
-- **No Lifecycle Hooks** - Basic startup/shutdown only
-- **Limited ctor return types** - Only support ctors which returns pointers
-- **Only types in ctor return** - Doesn't support interfaces as ctor return value
-- **Only one return value** - one ctor = one value
-
 ## 🛣️ Roadmap
 
 - [x] Basic dependency resolution with reflection
@@ -104,6 +95,17 @@ func (c *Container) MustResolve(target interface{})
 - [x] Error handling
 - [ ] Named dependency resolution
 - [x] Dependency graph visualization
+- [ ] Multiple return value support for ctor(error handling)
+- [ ] Scope support
+
+## ⚠️ Current Limitations
+
+- **Exact Type Matching Only** - No interface binding support
+- **Basic Named Dependencies** - No tags or name-based resolution
+- **No Lifecycle Hooks** - Basic startup/shutdown only
+- **Limited ctor return types** - Only support ctors which returns pointers
+- **Only types in ctor return** - Doesn't support interfaces as ctor return value
+- **Only one return value** - one ctor = one value
 
 ## 📊 Benefits
 
