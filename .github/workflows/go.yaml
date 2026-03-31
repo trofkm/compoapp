@@ -18,10 +18,18 @@ jobs:
           go-version: "1.24"
           cache: true
 
-      - name: Verify dependencies
+      - name: Verify root module dependencies
+        run: go mod verify
+
+      - name: Build root module
+        run: go build -v ./...
+
+      - name: Verify test module dependencies
+        working-directory: ./tests
         run: go mod verify
 
       - name: Run tests
+        working-directory: ./tests
         run: go test -v ./...
 
   test-coverage:
@@ -36,12 +44,13 @@ jobs:
           cache: true
 
       - name: Run coverage
+        working-directory: ./tests
         run: go test -race -coverprofile=coverage.txt -covermode=atomic ./...
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
-          file: ./coverage.txt
+          file: ./tests/coverage.txt
           flags: unittests
           name: codecov-umbrella
 
@@ -61,3 +70,9 @@ jobs:
         with:
           version: latest
           args: --timeout=5m
+
+      - name: golangci-lint (tests module)
+        run: |
+          cd tests
+          go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+          golangci-lint run --timeout=5m --config ../.golangci.yaml
