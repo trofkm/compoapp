@@ -24,6 +24,8 @@ type Container struct {
 	typesCtors map[reflect.Type]*constructorInfo
 
 	debug bool
+	// mark if container resolved
+	resolved bool
 }
 
 // Debug enables debug mode
@@ -210,6 +212,8 @@ func (c *Container) Resolve(target any) error {
 		instanceValue := reflect.ValueOf(instance)
 		if instanceValue.Type().AssignableTo(targetType) {
 			targetValue.Elem().Set(instanceValue)
+
+			c.resolved = true
 			return nil
 		}
 		return fmt.Errorf("resolved instance type %s is not assignable to target type %s",
@@ -454,6 +458,10 @@ const dotHeader string = `digraph DependencyGraph {
 func (c *Container) Visualize(filepath string) error {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
+
+	if !c.resolved {
+		return fmt.Errorf("you must call MustResolve or Resolve first")
+	}
 	//nolint:gosec
 	f, err := os.Create(filepath)
 	if err != nil {
