@@ -5,6 +5,10 @@ run:
   tests: false
   allow-parallel-runners: true
 linters:
+  exclusions:
+    paths:
+      - samples
+
   default: none
   enable:
     - bodyclose
