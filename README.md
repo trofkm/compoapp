@@ -1,144 +1,129 @@
-# 📦 CompoApp - Lightweight DI Framework for Go
+# compoapp
 
-**CompoApp** is a zero-dependency, 400-line DI (Dependency Injection) framework for Go that makes building scalable applications easy. It automatically resolves dependencies, manages component lifecycle, and handles graceful shutdowns.
+A small dependency injection container for Go. ~600 lines, no external dependencies.
 
-## 🌟 Features
-
-- **Zero Dependencies** - Pure Go, no external libraries
-- **Ultra Lightweight** - Only ~400 lines of clean, readable code
-- **Automatic Dependency Resolution** - Register constructors, we handle the rest
-- **Type-Based Wiring** - Dependencies resolved by function parameter types
-- **Topological Sorting** - Components created in correct dependency order
-- **Circular Dependency Detection** - Prevents runtime deadlocks
-- **Automatic Interface Implementation Injection** - Useful for testing
-- **Thread-Safe** - Safe for concurrent use
-- **Context-Based Lifecycle** - Graceful startup/shutdown
-
-## 🚀 Quick Start
-
-```go
-package main
-
-import "github.com/trofkm/compoapp"
-
-// Define your types
-type Database struct {
-    host string
-}
-
-type UserService struct {
-    db *Database
-}
-
-type HTTPServer struct {
-    userService *UserService
-}
-
-// Constructor functions
-func NewDatabase() *Database {
-    return &Database{host: "localhost:5432"}
-}
-
-func NewUserService(db *Database) *UserService {
-    return &UserService{db: db}
-}
-
-func NewHTTPServer(userService *UserService) *HTTPServer {
-    return &HTTPServer{userService: userService}
-}
-
-func main() {
-    // Create container
-    container := di.NewContainer()
-
-    // Register constructors
-    container.MustProvide(NewDatabase)
-    container.MustProvide(NewUserService)
-    container.MustProvide(NewHTTPServer)
-
-    // Resolve dependencies automatically
-    var server *HTTPServer
-    container.MustResolve(&server)
-
-    // server is now fully constructed with all dependencies!
-    fmt.Printf("Server created with database: %s\n", server.userService.db.host)
-}
-```
-
-## 🎯 How It Works
-
-1. **Register Constructors** - Provide functions that create your components
-2. **Automatic Analysis** - Container uses reflection to analyze parameters
-3. **Dependency Graph** - Builds dependency relationships automatically
-4. **Topological Sort** - Orders components for proper creation sequence
-5. **Resolve Dependencies** - Container creates instances in correct order
-
-## 🛠️ API Reference
-
-```go
-// Core functions
-func NewContainer() *Container
-func (c *Container) Provide(constructor interface{}) error
-func (c *Container) MustProvide(constructor interface{})
-func (c *Container) ProvideNamed(name string, constructor interface{}) error
-func (c *Container) MustProvideNamed(name string, constructor interface{}) error
-func (c *Container) Resolve(target interface{}) error
-func (c *Container) MustResolve(target interface{})
-```
-
-## 🛣️ Roadmap
-
-- [x] Basic dependency resolution with reflection
-- [x] Topological sorting and circular dependency detection
-- [x] Thread-safe container operations
-- [x] Interface binding support
-- [x] Error handling
-- [ ] Named dependency resolution
-- [x] Dependency graph visualization
-- [x] Error handling
-- [ ] Scope support
-- [ ] Lifecycle support
-
-## ⚠️ Current Limitations
-- **Basic Named Dependencies** - No tags or name-based resolution
-- **No Lifecycle Hooks** - Basic startup/shutdown only
-- **Limited ctor return types** - Only support ctors which returns pointers (*T) or (*T, error)
-- **Only types in ctor return** - Doesn't support interfaces as ctor return value
-
-## 📊 Benefits
-
-### Clean Architecture
-```go
-// Instead of manual wiring:
-db := NewDatabase()
-cache := NewCache()
-userService := NewUserService(db, cache)
-authService := NewAuthService(userService)
-server := NewServer(userService, authService)
-
-// Use automatic resolution:
-container.MustProvide(NewDatabase)
-container.MustProvide(NewCache)
-container.MustProvide(NewUserService)
-container.MustProvide(NewAuthService)
-container.MustProvide(NewServer)
-
-var server *Server
-container.MustResolve(&server)
-```
-
-## 📦 Installation
+## Install
 
 ```bash
 go get github.com/trofkm/compoapp
 ```
 
-## 📄 License
+## Basic usage
 
-MIT License - see LICENSE file for details.
+Register constructors, resolve the root type. Dependencies are wired automatically by parameter types.
 
----
+```go
+container := compoapp.NewContainer()
+container.MustProvide(NewDatabase)
+container.MustProvide(NewUserService)
+container.MustProvide(NewHTTPServer)
 
-*"400 lines of code that solve dependency injection elegantly"*
+var server *HTTPServer
+container.MustResolve(&server)
+```
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+The container builds a dependency graph, topologically sorts it, and constructs types in the correct order. Circular dependencies are detected and reported as errors.
+
+## Lifecycle
+
+For applications that need controlled startup and shutdown, use `ResolveLifecycle` instead of `MustResolve`.
+
+```go
+var server *HTTPServer
+if err := container.ResolveLifecycle(&server).Execute(ctx); err != nil {
+    log.Fatal(err)
+}
+```
+
+`Execute` runs three stages in order, then blocks until `ctx` is cancelled:
+
+```
+1. construct — all types built in dependency order
+2. init      — sequential, blocking, fail-fast
+3. start     — launched by lifecycle runner concurrently, each component waits for its dependencies to be ready
+```
+
+Each stage is opt-in via interfaces:
+
+```go
+type Initer interface {
+    Init(ctx context.Context) error
+}
+
+type Starter interface {
+    Start(ctx context.Context) error
+}
+
+type Readier interface {
+    Ready() <-chan struct{}
+}
+```
+
+A component implements only what it needs. `Config` might implement none. `Database` might implement all three.
+
+**Ordering guarantee:** if `HTTPServer` depends on `Database`, then `Database.Init`, `Database.Start`, and `Database.Ready()` all complete before `HTTPServer.Start` is called.
+
+**Graceful shutdown** is the component's own responsibility via `ctx.Done()`:
+
+```go
+type Database struct {
+	ready chan struct{}
+}
+
+func NewDatabase() *Database {
+	// make it buffered
+	return &Database{ready: make(chan struct{}, 1)}
+}
+
+func (d *Database) Start(ctx context.Context) error {
+	// startup work...
+	d.ready <- struct{}
+	close(d.ready)
+
+	<-ctx.Done()
+	// shutdown work...
+	d.conn.Close()
+
+	return nil
+}
+
+func (d *Database) Ready() <-chan struct{} {
+	return d.ready // same channel every time, created in constructor
+}
+```
+
+Full example with a realistic dependency tree: [samples/lifecycle](samples/lifecycle)
+
+## API
+
+```go
+func NewContainer() *Container
+func (c *Container) Provide(constructor interface{}) error
+func (c *Container) MustProvide(constructor interface{})
+func (c *Container) Resolve(target interface{}) error
+func (c *Container) MustResolve(target interface{})
+func (c *Container) Debug()
+func (c *Container) Visualize(pathToDot string) error
+func (c *Container) ResolveLifecycle(target interface{}) *LifecycleRunner
+func (r *LifecycleRunner) Execute(ctx context.Context) error
+```
+
+## Roadmap
+
+- [x] Dependency resolution with reflection
+- [x] Topological sorting and circular dependency detection
+- [x] Thread-safe container operations
+- [x] Interface binding support
+- [x] Lifecycle support (Init, Start, Ready)
+- [ ] Named/tagged dependencies
+- [ ] Scope support
+
+## Limitations
+
+- Constructors must return `*T` or `(*T, error)`
+- No interface return types from constructors
+- No named/tagged dependencies
+
+## License
+
+MIT
