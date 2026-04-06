@@ -212,7 +212,7 @@ func (c *Container) Resolve(target any) error {
 			// todo: in case this
 			sorted = append(sorted, v)
 		} else {
-			return fmt.Errorf("this is impossible, but this happends: we can't find the instance for registered type")
+			return fmt.Errorf("this is impossible, but this happens: we can't find the instance for registered type")
 		}
 	}
 	c.sorted = sorted
