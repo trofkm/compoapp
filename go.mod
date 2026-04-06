@@ -1,3 +1,5 @@
 module github.com/trofkm/compoapp
 
-go 1.24.0
+go 1.25.0
+
+require golang.org/x/sync v0.20.0

@@ -26,6 +26,8 @@ type Container struct {
 	debug bool
 	// mark if container resolved
 	resolved bool
+	// Resolved types topsorted
+	sorted []any
 }
 
 // Debug enables debug mode
@@ -200,12 +202,20 @@ func (c *Container) Resolve(target any) error {
 	}
 
 	// Step 3: Resolve all dependencies in order
+	sorted := make([]any, 0, len(sortedTypes))
 	for _, name := range sortedTypes {
 		// todo: here might be tagged instances too
 		if err := c.resolveInstance(name); err != nil {
 			return fmt.Errorf("failed to resolve %s: %w", name, err)
 		}
+		if v, ok := c.instances[name]; ok {
+			// todo: in case this
+			sorted = append(sorted, v)
+		} else {
+			return fmt.Errorf("this is impossible, but this happends: we can't find the instance for registered type")
+		}
 	}
+	c.sorted = sorted
 
 	// Step 4: Set the target value
 	if instance, exists := c.instances[targetType]; exists {
