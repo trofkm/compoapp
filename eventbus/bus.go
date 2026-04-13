@@ -6,6 +6,10 @@ import (
 	"sync"
 )
 
+const (
+	eventChanSize = 128
+)
+
 type subscriber func(ctx context.Context, data any)
 
 type Subscriber[T any] func(ctx context.Context, data T)
@@ -38,9 +42,8 @@ func (e *EventBus) Publish(data any) {
 }
 
 func Subscribe[T any](bus *EventBus, sub Subscriber[T]) {
-	var zero T
-	typ := reflect.TypeOf(&zero).Elem()
-	ch := make(chan any, 128)
+	typ := reflect.TypeFor[T]()
+	ch := make(chan any, eventChanSize)
 	bus.events[typ] = append(bus.events[typ], ch)
 	bus.subs[typ] = append(bus.subs[typ], func(ctx context.Context, data any) {
 		sub(ctx, data.(T))
