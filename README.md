@@ -117,6 +117,10 @@ func (r *LifecycleRunner) Execute(ctx context.Context) error
 - [x] Lifecycle support (Init, Start, Ready)
 - [ ] Named/tagged dependencies
 - [ ] Scope support
+- [ ] Init/Start timeout
+- [ ] Startup profiler
+- [ ] Lazy initialization
+- [ ] Mermaid diagram
 
 ## Limitations
 
