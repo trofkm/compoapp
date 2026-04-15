@@ -219,6 +219,69 @@ var _ = Describe("Container", func() {
 		})
 	})
 
+	Describe("Interface-Returning Constructors", func() {
+		It("should support constructor returning interface", func() {
+			newStorage := func() Storage {
+				return &FileStorage{path: "/data"}
+			}
+
+			Expect(container.Provide(newStorage)).To(Succeed())
+
+			var storage Storage
+			Expect(container.Resolve(&storage)).To(Succeed())
+			Expect(storage).ToNot(BeNil())
+
+			fs, ok := storage.(*FileStorage)
+			Expect(ok).To(BeTrue())
+			Expect(fs.path).To(Equal("/data"))
+		})
+
+		It("should support constructor returning (interface, error)", func() {
+			newStorage := func() (Storage, error) {
+				return &FileStorage{path: "/data"}, nil
+			}
+
+			Expect(container.Provide(newStorage)).To(Succeed())
+
+			var storage Storage
+			Expect(container.Resolve(&storage)).To(Succeed())
+			Expect(storage).ToNot(BeNil())
+
+			fs, ok := storage.(*FileStorage)
+			Expect(ok).To(BeTrue())
+			Expect(fs.path).To(Equal("/data"))
+		})
+
+		It("should propagate error from (interface, error) constructor", func() {
+			newStorage := func() (Storage, error) {
+				return nil, errors.New("storage init failed")
+			}
+
+			Expect(container.Provide(newStorage)).To(Succeed())
+
+			var storage Storage
+			Expect(container.Resolve(&storage)).To(MatchError(ContainSubstring("storage init failed")))
+		})
+
+		It("should use interface-returning constructor as dependency", func() {
+			newStorage := func() Storage {
+				return &FileStorage{path: "/injected"}
+			}
+
+			Expect(container.Provide(newStorage)).To(Succeed())
+			Expect(container.Provide(NewDataProcessor)).To(Succeed())
+
+			var processor *DataProcessor
+			Expect(container.Resolve(&processor)).To(Succeed())
+			Expect(processor).ToNot(BeNil())
+			Expect(processor.storage).ToNot(BeNil())
+
+			fs, ok := processor.storage.(*FileStorage)
+			Expect(ok).To(BeTrue())
+			Expect(fs.path).To(Equal("/injected"))
+		})
+	})
+
 	Describe("Error Handling", func() {
 		It("should handle constructor errors", func() {
 			Expect(container.Provide(NewErrorDatabase)).To(Succeed())

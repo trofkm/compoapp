@@ -156,8 +156,8 @@ func (c *Container) analyzeFunction(fnType reflect.Type) (fnSignature, error) {
 	}
 
 	firstOut := fnType.Out(0)
-	if firstOut.Kind() != reflect.Pointer {
-		return fnSignature{}, fmt.Errorf("constructor must return pointer value as first result")
+	if firstOut.Kind() != reflect.Pointer && firstOut.Kind() != reflect.Interface {
+		return fnSignature{}, fmt.Errorf("constructor must return pointer or interface value as first result")
 	}
 
 	if fnType.NumOut() == 2 {
@@ -246,6 +246,12 @@ func (c *Container) resolveInterfaces() error {
 			signature := &ctorInfo.signature
 
 			interfaceType := signature.args[i]
+
+			// If there's already a constructor that directly returns this interface type, skip resolution
+			if _, exists := c.typesCtors[interfaceType]; exists {
+				c.debugf("interface %s has a direct constructor, skipping resolution", interfaceType)
+				continue
+			}
 
 			// Find implementation
 			implementations := c.findImplementations(interfaceType)
