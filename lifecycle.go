@@ -28,33 +28,58 @@ type Redier interface {
 //
 // It launches the Init() and Start() with correct order and automatically waits for component to be started
 type LifecycleRunner struct {
-	container *Container
-	target    any
+	mu          sync.RWMutex
+	readiers    map[any][]<-chan struct{}
+	initialized map[any]struct{}
+	container   *Container
+	targets     []any
 	// responsible for logs
 	debug bool
 }
 
-// ResolveLifecycle creates LifecycleRunner from container
-func (c *Container) ResolveLifecycle(target any) *LifecycleRunner {
-	return &LifecycleRunner{container: c, target: target, debug: c.debug}
+// ResolveLifecycle creates LifecycleRunner from container for multiple top-level targets.
+func (c *Container) ResolveLifecycle(targets ...any) *LifecycleRunner {
+	// todo: add debug mode?
+	return &LifecycleRunner{
+		readiers:    make(map[any][]<-chan struct{}),
+		initialized: make(map[any]struct{}),
+		container:   c,
+		targets:     targets,
+		debug:       c.debug,
+	}
 }
 
 func (r *LifecycleRunner) Execute(ctx context.Context) error {
-	if err := r.container.Resolve(r.target); err != nil {
+	eg, ctx := errgroup.WithContext(ctx)
+
+	for _, t := range r.targets {
+		eg.Go(func() error {
+			return r.executeOne(ctx, t)
+		})
+	}
+	return eg.Wait()
+}
+
+func (r *LifecycleRunner) executeOne(ctx context.Context, target any) error {
+	if err := r.container.Resolve(target); err != nil {
 		return fmt.Errorf("resolve: %w", err)
 	}
 
 	for _, component := range r.container.sorted {
 		if i, ok := component.(Initer); ok {
+			if _, ok := r.initialized[component]; ok {
+				// component already initialized
+				continue
+			}
+			r.initialized[component] = struct{}{}
 			r.debugf("calling %T.Init(ctx)", i)
+			// here we have to collect initialized components
 			if err := i.Init(ctx); err != nil {
 				return fmt.Errorf("init %T: %w", component, err)
 			}
+
 		}
 	}
-
-	// component -> ready channels of its dependencies
-	readiers := make(map[any][]<-chan struct{})
 
 	for typ, val := range r.container.instances {
 		componentVal := r.container.instances[typ]
